@@ -87,7 +87,7 @@ class Agent:
         # Update epsilon
         self.epsilon = max(self.epsilon_min, self.epsilon_decay * self.epsilon)
 
-    def save(self, filename="./mario_model"):
+    def save(self, filename="./109061225_hw2_data"):
         torch.save(
             {
                 "model_state_dict": self.model.state_dict(),
@@ -96,7 +96,7 @@ class Agent:
             filename,
         )
 
-    def load(self, filename="./mario_model"):
+    def load(self, filename="./109061225_hw2_data"):
         checkpoint = torch.load(filename, map_location=self.device)
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
