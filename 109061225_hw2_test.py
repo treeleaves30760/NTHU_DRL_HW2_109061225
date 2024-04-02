@@ -22,9 +22,11 @@ class DQN(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(DQN, self).__init__()
         self.net = nn.Sequential(
-            nn.Linear(input_dim, 128),
+            nn.Linear(input_dim, 512),
             nn.ReLU(),
-            nn.Linear(128, 256),
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Linear(256, 256),
             nn.ReLU(),
             nn.Linear(256, output_dim),
         )
@@ -34,11 +36,10 @@ class DQN(nn.Module):
 
 
 class Agent:
-    def __init__(self):
-        self.model = DQN(
-            84 * 84, env.action_space.n
-        )  # Adjust the input dimension based on your preprocessing
-        self.target_model = DQN(84 * 84, env.action_space.n)
+    def __init__(self, device="cpu", mode="test"):
+        self.device = torch.device(device if torch.cuda.is_available() else "cpu")
+        self.model = DQN(84 * 84, env.action_space.n).to(self.device)
+        self.target_model = DQN(84 * 84, env.action_space.n).to(self.device)
         self.optimizer = optim.Adam(self.model.parameters())
         self.memory = deque(maxlen=10000)
         self.batch_size = 32
@@ -46,11 +47,13 @@ class Agent:
         self.epsilon = 1.0
         self.epsilon_decay = 0.995
         self.epsilon_min = 0.01
+        if mode == "test":
+            self.load()
 
     def act(self, state):
         if np.random.rand() <= self.epsilon:
             return env.action_space.sample()
-        state = torch.FloatTensor(state).unsqueeze(0)
+        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
         action_values = self.model(state)
         return np.argmax(action_values.cpu().data.numpy())
 
@@ -62,26 +65,29 @@ class Agent:
             return
         minibatch = random.sample(self.memory, self.batch_size)
         for state, action, reward, next_state, done in minibatch:
-            state = torch.FloatTensor(state)
-            next_state = torch.FloatTensor(next_state)
-            action = torch.LongTensor([action])
-            reward = torch.FloatTensor([reward])
-            done = torch.FloatTensor([done])
+            state = torch.FloatTensor(state).to(self.device)
+            next_state = torch.FloatTensor(next_state).to(self.device)
+            action = torch.LongTensor([action]).to(self.device)
+            reward = torch.FloatTensor([reward]).to(self.device)
+            done = torch.FloatTensor([done]).to(self.device)
 
-            current_q = self.model(state)[0][action]
+            current_q = self.model(state).gather(1, action.unsqueeze(1)).squeeze(1)
             next_q = self.target_model(next_state).detach().max(1)[0]
             target_q = reward + (self.gamma * next_q * (1 - done))
 
             # This creates a mask to zero-out all other Q-values except for the action taken
             q_update = self.model(state)
-            q_update[0][action] = target_q
+            q_update = q_update.gather(1, action.unsqueeze(1)).squeeze(1)
 
             loss = nn.MSELoss()(current_q, target_q)
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
 
-    def save(self, filename="./109061225_hw2/109061225_hw2_data"):
+        # Update epsilon
+        self.epsilon = max(self.epsilon_min, self.epsilon_decay * self.epsilon)
+
+    def save(self, filename="./mario_model"):
         torch.save(
             {
                 "model_state_dict": self.model.state_dict(),
@@ -90,7 +96,10 @@ class Agent:
             filename,
         )
 
-    def load(self, filename="./109061225_hw2/109061225_hw2_data"):
-        checkpoint = torch.load(filename)
+    def load(self, filename="./mario_model"):
+        checkpoint = torch.load(filename, map_location=self.device)
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        self.model.to(
+            self.device
+        )  # Ensure model is on the correct device after loading
