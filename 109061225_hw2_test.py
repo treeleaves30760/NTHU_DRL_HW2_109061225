@@ -58,6 +58,7 @@ class Agent:
         self.epsilon = 1.0
         self.epsilon_decay = 0.995
         self.epsilon_min = 0.01
+        self.load()
 
     def act(self, state):
         if np.random.rand() <= self.epsilon:
