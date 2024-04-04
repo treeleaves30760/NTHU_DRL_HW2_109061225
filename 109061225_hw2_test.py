@@ -114,28 +114,32 @@ class DQN(nn.Module):
         )
 
 
-# Apply Wrappers to environment
-env = SkipFrame(env, skip=4)
-env = GrayScaleObservation(env)
-env = ResizeObservation(env, shape=84)
-env = FrameStack(env, num_stack=4)
-
-
 class Agent:
-    def __init__(self, state_dim=(4, 84, 84), action_dim=env.action_space.n):
+    def __init__(
+        self, state_dim=(4, 84, 84), action_dim=env.action_space.n, mode="test"
+    ):
         self.state_dim = state_dim
         self.action_dim = action_dim
-
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.mode = mode
+        if mode == "test":
+            self.device = "cpu"
+        else:
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
         self.net = DQN(self.state_dim, self.action_dim).float()
         self.net = self.net.to(device=self.device)
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.00025)
         self.loss_fn = torch.nn.SmoothL1Loss()
 
-        self.exploration_rate = 1
-        self.exploration_rate_decay = 0.99999975
-        self.exploration_rate_min = 0.1
+        if mode == "test":
+            self.exploration_rate = -1
+            self.exploration_rate_decay = 1
+            self.exploration_rate_min = -1
+        else:
+            self.exploration_rate = 1
+            self.exploration_rate_decay = 0.99999975
+            self.exploration_rate_min = 0.1
+
         self.curr_step = 0
 
         self.save_every = 5e5  # no. of experiences between saving Mario Net
@@ -149,12 +153,30 @@ class Agent:
         self.learn_every = 3  # no. of experiences between updates to Q_online
         self.sync_every = 1e4  # no. of experiences between Q_target & Q_online sync
 
+        # Preprocessing transforms
+        self.transform = T.Compose(
+            [
+                T.ToPILImage(),
+                T.Resize((84, 84)),  # Resize to match DQN input
+                T.Grayscale(num_output_channels=1),
+                T.ToTensor(),
+            ]
+        )
+
         self.load("./109061225_hw2_data")
+
+    def preprocess(self, observation):
+        # Apply transforms to observation
+        observation = self.transform(observation)
+        observation = observation.repeat(1, 4, 1, 1)
+        return observation
 
     def act(self, state):
         """Given a state, choose an epsilon-greedy action"""
+        state = self.preprocess(state).squeeze(0).to(self.device)
         # EXPLORE
-        if np.random.rand() < self.exploration_rate:
+        p = np.random.rand()
+        if p < self.exploration_rate:
             action_idx = np.random.randint(self.action_dim)
 
         # EXPLOIT
@@ -164,16 +186,16 @@ class Agent:
                 if isinstance(state, tuple)
                 else state.__array__().copy()
             )
-            state = (
-                torch.tensor(state, device=self.device).unsqueeze(0).float()
-            )  # Convert to float
+            state = torch.tensor(state, device=self.device).float().unsqueeze(0)
             action_values = self.net(state, model="online")
             action_idx = torch.argmax(action_values, axis=1).item()
 
         # decrease exploration_rate
-        self.exploration_rate *= self.exploration_rate_decay
-        self.exploration_rate = max(self.exploration_rate_min, self.exploration_rate)
-
+        if self.mode != "test":
+            self.exploration_rate *= self.exploration_rate_decay
+            self.exploration_rate = max(
+                self.exploration_rate_min, self.exploration_rate
+            )
         # increment step
         self.curr_step += 1
         return action_idx
@@ -262,7 +284,8 @@ class Agent:
         save_dict = torch.load(path, map_location=self.device)  # Add map_location here
         self.net.load_state_dict(save_dict["model"])
         self.net = self.net.to(self.device)
-        self.exploration_rate = save_dict["exploration_rate"]
+        if self.mode != "test":
+            self.exploration_rate = save_dict["exploration_rate"]
         print(f"DQN loaded from {path} at step {self.curr_step}")
 
     def update_Q_online(self, td_estimate, td_target):
@@ -283,17 +306,17 @@ if __name__ == "__main__":
     mario = Agent(state_dim=(4, 84, 84), action_dim=env.action_space.n)
 
     # Test the model
-    num_test_episodes = 10
-    for i in range(num_test_episodes):
-        state = env.reset()
-        episode_cycle = 0
-        while True:
-            env.render()
-            action = mario.act(state)
-            next_state, reward, done, info = env.step(action)
-            state = next_state
-            episode_cycle += 1
-            if done:
-                break
-        print(f"Episode {i} finished after {episode_cycle} cycles")
+    state = env.reset()
+    episode_cycle = 0
+    total_reward = 0
+    while True:
+        env.render()
+        action = mario.act(state)
+        next_state, reward, done, info = env.step(action)
+        total_reward += reward
+        state = next_state
+        episode_cycle += 1
+        if done:
+            break
+    print(f"Finished after {episode_cycle} cycles, total reward: {total_reward}")
     env.close()
