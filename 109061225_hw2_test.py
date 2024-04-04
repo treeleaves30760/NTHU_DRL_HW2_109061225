@@ -122,7 +122,7 @@ env = FrameStack(env, num_stack=4)
 
 
 class Agent:
-    def __init__(self, state_dim, action_dim):
+    def __init__(self, state_dim=(4, 84, 84), action_dim=env.action_space.n):
         self.state_dim = state_dim
         self.action_dim = action_dim
 
