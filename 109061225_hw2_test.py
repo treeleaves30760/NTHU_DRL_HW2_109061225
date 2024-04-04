@@ -149,7 +149,7 @@ class Agent:
         self.learn_every = 3  # no. of experiences between updates to Q_online
         self.sync_every = 1e4  # no. of experiences between Q_target & Q_online sync
 
-        self.load()
+        self.load("./109061225_hw2_data")
 
     def act(self, state):
         """Given a state, choose an epsilon-greedy action"""
@@ -164,7 +164,9 @@ class Agent:
                 if isinstance(state, tuple)
                 else state.__array__().copy()
             )
-            state = torch.tensor(state, device=self.device).unsqueeze(0)
+            state = (
+                torch.tensor(state, device=self.device).unsqueeze(0).float()
+            )  # Convert to float
             action_values = self.net(state, model="online")
             action_idx = torch.argmax(action_values, axis=1).item()
 
