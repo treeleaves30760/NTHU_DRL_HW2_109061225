@@ -160,7 +160,9 @@ class Agent:
         # EXPLOIT
         else:
             state = (
-                state[0].__array__() if isinstance(state, tuple) else state.__array__()
+                state[0].__array__().copy()
+                if isinstance(state, tuple)
+                else state.__array__().copy()
             )
             state = torch.tensor(state, device=self.device).unsqueeze(0)
             action_values = self.net(state, model="online")
