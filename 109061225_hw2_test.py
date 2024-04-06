@@ -133,9 +133,9 @@ class Agent:
 
         self.curr_step = 0
         if mode == "test":
-            self.exploration_rate = 0.12
+            self.exploration_rate = 0.1
             self.exploration_rate_decay = 1
-            self.exploration_rate_min = 0.12
+            self.exploration_rate_min = 0.1
             self.load("./109061225_hw2_data_139")
         else:
             self.exploration_rate = 1
@@ -170,11 +170,10 @@ class Agent:
         return observation
 
     def act(self, state):
-        """Given a state, choose an epsilon-greedy action"""
-        state = self.preprocess(state).squeeze(0).to(self.device)
+        if self.mode == "test":
+            state = self.preprocess(state).squeeze(0).to(self.device)
         # EXPLORE
-        p = np.random.rand()
-        if p < self.exploration_rate:
+        if np.random.rand() < self.exploration_rate:
             action_idx = np.random.randint(self.action_dim)
 
         # EXPLOIT
