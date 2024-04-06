@@ -131,16 +131,16 @@ class Agent:
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.00025)
         self.loss_fn = torch.nn.SmoothL1Loss()
 
+        self.curr_step = 0
         if mode == "test":
-            self.exploration_rate = 0.1
+            self.exploration_rate = 0.12
             self.exploration_rate_decay = 1
-            self.exploration_rate_min = 0.1
+            self.exploration_rate_min = 0.12
+            self.load("./109061225_hw2_data_139")
         else:
             self.exploration_rate = 1
             self.exploration_rate_decay = 0.99999975
             self.exploration_rate_min = 0.1
-
-        self.curr_step = 0
 
         self.save_every = 5e5  # no. of experiences between saving Mario Net
 
@@ -162,8 +162,6 @@ class Agent:
                 T.ToTensor(),
             ]
         )
-
-        self.load("./109061225_hw2_data_109")
 
     def preprocess(self, observation):
         # Apply transforms to observation
