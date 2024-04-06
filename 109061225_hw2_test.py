@@ -136,7 +136,7 @@ class Agent:
             self.exploration_rate = 0.1
             self.exploration_rate_decay = 1
             self.exploration_rate_min = 0.1
-            self.load("./109061225_hw2_data_139")
+            self.load("./109061225_hw2_data_169")
         else:
             self.exploration_rate = 1
             self.exploration_rate_decay = 0.99999975
@@ -175,7 +175,6 @@ class Agent:
         # EXPLORE
         if np.random.rand() < self.exploration_rate:
             action_idx = np.random.randint(self.action_dim)
-
         # EXPLOIT
         else:
             state = (
