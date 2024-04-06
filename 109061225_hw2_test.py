@@ -101,16 +101,16 @@ class DQN(nn.Module):
 
     def __build_cnn(self, c, output_dim):
         return nn.Sequential(
-            nn.Conv2d(in_channels=c, out_channels=32, kernel_size=8, stride=4),
+            nn.Conv2d(in_channels=c, out_channels=128, kernel_size=8, stride=4),
             nn.ReLU(),
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=4, stride=2),
             nn.ReLU(),
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1),
+            nn.Conv2d(in_channels=128, out_channels=64, kernel_size=3, stride=1),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(3136, 360),
+            nn.Linear(3136, 256),
             nn.ReLU(),
-            nn.Linear(360, output_dim),
+            nn.Linear(256, output_dim),
         )
 
 
@@ -163,7 +163,7 @@ class Agent:
             ]
         )
 
-        self.load("./109061225_hw2_data")
+        self.load("./109061225_hw2_data_9")
 
     def preprocess(self, observation):
         # Apply transforms to observation
