@@ -13,8 +13,6 @@ from gym.spaces import Box
 from torchvision import transforms as T
 import time
 
-print(len(COMPLEX_MOVEMENT))
-print(COMPLEX_MOVEMENT)
 # Setup the environment
 env = gym_super_mario_bros.make("SuperMarioBros-v0")
 env = JoypadSpace(env, COMPLEX_MOVEMENT)
@@ -165,7 +163,7 @@ class Agent:
             ]
         )
 
-        self.load("./109061225_hw2_data_29")
+        self.load("./109061225_hw2_data_109")
 
     def preprocess(self, observation):
         # Apply transforms to observation
@@ -200,8 +198,6 @@ class Agent:
             )
         # increment step
         self.curr_step += 1
-        # access = [1, 2, 3, 4, 5, 11]
-        # action_idx = access[random.randint(0, 5)]
         return action_idx
 
     def cache(self, state, next_state, action, reward, done):
@@ -308,19 +304,22 @@ if __name__ == "__main__":
     print(f"Using CUDA: {use_cuda}")
 
     mario = Agent(state_dim=(4, 84, 84), action_dim=env.action_space.n)
-
-    # Test the model
-    state = env.reset()
-    episode_cycle = 0
     total_reward = 0
-    while True:
-        env.render()
-        action = mario.act(state)
-        next_state, reward, done, info = env.step(action)
-        total_reward += reward
-        state = next_state
-        episode_cycle += 1
-        if done:
-            break
-    print(f"Finished after {episode_cycle} cycles, total reward: {total_reward}")
+    for i in range(50):
+        # Test the model
+        state = env.reset()
+        episode_cycle = 0
+        episode_reward = 0
+        while True:
+            env.render()
+            action = mario.act(state)
+            next_state, reward, done, info = env.step(action)
+            episode_reward += reward
+            state = next_state
+            episode_cycle += 1
+            if done:
+                break
+        total_reward += episode_reward
+        print(f"Finished after {episode_cycle} cycles, total reward: {episode_reward}")
+    print(f"Average reward: {total_reward / 50}")
     env.close()
