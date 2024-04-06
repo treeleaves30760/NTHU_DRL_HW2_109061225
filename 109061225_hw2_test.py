@@ -13,6 +13,8 @@ from gym.spaces import Box
 from torchvision import transforms as T
 import time
 
+print(len(COMPLEX_MOVEMENT))
+print(COMPLEX_MOVEMENT)
 # Setup the environment
 env = gym_super_mario_bros.make("SuperMarioBros-v0")
 env = JoypadSpace(env, COMPLEX_MOVEMENT)
@@ -93,7 +95,7 @@ class DQN(nn.Module):
         for p in self.target.parameters():
             p.requires_grad = False
 
-    def forward(self, input, model):
+    def forward(self, input, model="online"):
         if model == "online":
             return self.online(input)
         elif model == "target":
@@ -105,12 +107,12 @@ class DQN(nn.Module):
             nn.ReLU(),
             nn.Conv2d(in_channels=128, out_channels=128, kernel_size=4, stride=2),
             nn.ReLU(),
-            nn.Conv2d(in_channels=128, out_channels=64, kernel_size=3, stride=1),
+            nn.Conv2d(in_channels=128, out_channels=32, kernel_size=3, stride=1),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(3136, 256),
+            nn.Linear(1568, 512),
             nn.ReLU(),
-            nn.Linear(256, output_dim),
+            nn.Linear(512, output_dim),
         )
 
 
@@ -132,9 +134,9 @@ class Agent:
         self.loss_fn = torch.nn.SmoothL1Loss()
 
         if mode == "test":
-            self.exploration_rate = -1
+            self.exploration_rate = 0.1
             self.exploration_rate_decay = 1
-            self.exploration_rate_min = -1
+            self.exploration_rate_min = 0.1
         else:
             self.exploration_rate = 1
             self.exploration_rate_decay = 0.99999975
@@ -163,7 +165,7 @@ class Agent:
             ]
         )
 
-        self.load("./109061225_hw2_data_9")
+        self.load("./109061225_hw2_data_29")
 
     def preprocess(self, observation):
         # Apply transforms to observation
@@ -198,6 +200,8 @@ class Agent:
             )
         # increment step
         self.curr_step += 1
+        # access = [1, 2, 3, 4, 5, 11]
+        # action_idx = access[random.randint(0, 5)]
         return action_idx
 
     def cache(self, state, next_state, action, reward, done):
